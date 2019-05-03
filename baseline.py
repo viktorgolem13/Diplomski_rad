@@ -20,6 +20,7 @@ def baseline(x_train, x_test, y_train, y_test):
 
 def main():
     x_train, x_test, y_train, y_test = preprocessing.get_data()
+    print(x_train.shape)
     vectorize_function = preprocessing.vectorize_data_tfidf
     vectorizer = preprocessing.get_tfidf_vectorizer(x_train)
     x_train = preprocessing.add_features_and_vectorize(x_train, vectorize_function, vectorizer)

@@ -446,6 +446,14 @@ def lstm_model_hyperparameters_random_search(x, y, n_iterations=100):
         else:
             bidirectional = False
 
+        r = random()
+        if r < 0.3:
+            activation = "sigmoid"
+        elif r < 0.6:
+            activation = "relu"
+        else:
+            activation = "None"
+
         model = Sequential()
 
         if bidirectional:
@@ -456,7 +464,10 @@ def lstm_model_hyperparameters_random_search(x, y, n_iterations=100):
             model.add(LSTM(units=broj_neurona_u_sloju, dropout=dropout_rate, recurrent_dropout=recurrent_dropout,
                            input_shape=(x_train.shape[1], x_train.shape[2])))
 
-        model.add(Activation('sigmoid'))
+        if activation == "sigmoid":
+            model.add(Activation('sigmoid'))
+        elif activation == "relu":
+            model.add(Activation('relu'))
 
         model.add(Dense(output_dim=2))
         model.add(Activation('softmax'))
@@ -483,6 +494,7 @@ def lstm_model_hyperparameters_random_search(x, y, n_iterations=100):
             print('recurrent_dropout: ', recurrent_dropout)
             print('bidirectional: ', bidirectional)
             print('dropout_rate: ', dropout_rate)
+            print('activation: ', activation)
             print()
             best_avg = avg_score
             best_model = model
@@ -502,6 +514,7 @@ def lstm_model_hyperparameters_random_search(x, y, n_iterations=100):
             print('recurrent_dropout: ', recurrent_dropout)
             print('bidirectional: ', bidirectional)
             print('dropout_rate: ', dropout_rate)
+            print('activation: ', activation)
             print()
             best_acc = acc_score
 
@@ -518,6 +531,7 @@ def lstm_model_hyperparameters_random_search(x, y, n_iterations=100):
             print('recurrent_dropout: ', recurrent_dropout)
             print('bidirectional: ', bidirectional)
             print('dropout_rate: ', dropout_rate)
+            print('activation: ', activation)
             print()
             best_f1 = f1_score
 

@@ -9,6 +9,7 @@ from sklearn import metrics
 
 import preprocessing
 import hyperparameters
+import bipolarDataset
 from constants import *
 
 
@@ -57,7 +58,7 @@ def get_lstm_model(use_embedding_layer, word_index=None, embedding_matrix=None, 
 
 def run(x_train, x_test, y_train, y_test, model):
     y_train_one_hot = preprocessing.class_one_hot(y_train)
-    model.fit(x_train, y_train_one_hot, nb_epoch=16, batch_size=10)
+    model.fit(x_train, y_train_one_hot, nb_epoch=8, batch_size=50)
 
     pred = model.predict_classes(x_test, 10)
     print(pred)
@@ -76,15 +77,18 @@ def ff():
 def lstm_with_embedding_layer():
     x_train, x_test, y_train, y_test = preprocessing.get_data()
     embedding_matrix, word_index, tokenizer = preprocessing.get_embedding_matrix(x_train)
-    x_train, x_test = preprocessing.vectorize_with_tokenizer(x_train, x_test, tokenizer)
+    x_train = preprocessing.vectorize_with_tokenizer(x_train, tokenizer)
+    x_test = preprocessing.vectorize_with_tokenizer(x_test, tokenizer)
     model = get_lstm_model(True, word_index, embedding_matrix)
     run(x_train, x_test, y_train, y_test, model)
 
 
 def lstm():
-    x_train, x_test, y_train, y_test = preprocessing.get_data()
+    # x_train, x_test, y_train, y_test = preprocessing.get_data()
+    x_train, x_test, y_train, y_test = bipolarDataset.get_bipolar_disorder_data()
     vectorize_function = preprocessing.vectorize_data_glove
     embedding_index = preprocessing.get_embeddings_index()
+    print(x_train[0])
     x_train = preprocessing.add_features_and_vectorize(x_train, vectorize_function, embedding_index)
     x_test = preprocessing.add_features_and_vectorize(x_test, vectorize_function, embedding_index)
     model = get_lstm_model(use_embedding_layer=False, input_shape=(x_train.shape[1], x_train.shape[2]))

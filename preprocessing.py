@@ -176,7 +176,6 @@ def one_hot_to_class(y_oh):
 
 
 def class_one_hot(y):
-    print(y)
     y_oh = np.zeros((len(y), max(y) + 1))
     for i in range(len(y)):
         y_oh[i, y[i]] = 1
