@@ -5,17 +5,24 @@ from preprocessing import shuffle
 from constants import *
 
 
-def get_bipolar_disorder_data():
+def get_bipolar_disorder_data(start_index = 0, skiprows_start=10**3, skiprows_end=10**7, nrows = 2 * 10**3, test_size=0.2):
     df = pd.read_csv(BIPOLAR_DATA_DIR + "bipolar_control_reddit.csv",
-                     skiprows=range(2 * 10 ** 2, 10 ** 7), nrows=4 * 10 ** 2)
+                     skiprows=list(range(1, start_index)) + list(range(skiprows_start, skiprows_end)), nrows=nrows)
+    print(df.head())
     df = df[["body", "classification"]]
     df = df.dropna(axis=0, how='any')
-    print(df.head())
     x = df["body"].values
     y = df["classification"].values
 
     x, y = shuffle(x, y)
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
+
+    if test_size > 1:
+        test_size = test_size / nrows
+    
+    if test_size == 0 or test_size == 1:
+        return x, y
+
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=test_size)
     return x_train, x_test, y_train, y_test
 
 

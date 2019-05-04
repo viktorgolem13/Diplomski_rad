@@ -1,5 +1,5 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
-from nltk.corpus import stopwords
+# from nltk.corpus import stopwords
 import numpy as np
 
 from keras.preprocessing.text import Tokenizer
@@ -9,39 +9,48 @@ from constants import *
 import additional_fetures as af
 
 
-def get_data():
-    x_train_positive = open("train_positive.txt", "r", encoding="utf8").readlines()[:1000]
-    x_train_negative = open("train_negative.txt", "r", encoding="utf8").readlines()[:1000]
-    x_test_positive = open("test_positive.txt", "r", encoding="utf8").readlines()[:200]
-    x_test_negative = open("test_negative.txt", "r", encoding="utf8").readlines()[:200]
+def get_data(start_index=0, end_index=1000, test_size=200):
+    if end_index != 0:
+        x_train_positive = open("train_positive.txt", "r", encoding="utf8").readlines()[start_index:end_index]
+        x_train_negative = open("train_negative.txt", "r", encoding="utf8").readlines()[start_index:end_index]
 
-    x_train_positive = np.asarray(x_train_positive, dtype='<U1000')
-    x_train_negative = np.asarray(x_train_negative, dtype='<U1000')
+        x_train_positive = np.asarray(x_train_positive, dtype='<U1000')
+        x_train_negative = np.asarray(x_train_negative, dtype='<U1000')
+        y_train_positive = np.ones_like(x_train_positive, dtype=np.uint16)
+        y_train_negative = np.zeros_like(x_train_negative, dtype=np.uint16)
+
+        print('train positive: ', y_train_positive.shape)
+        print('train negative: ', y_train_negative.shape)
+        train_ratio = y_train_positive.shape[0] / (y_train_positive.shape[0] + y_train_negative.shape[0])
+        print('train positive percentage: ', train_ratio)
+
+        x_train = np.concatenate((x_train_positive, x_train_negative), axis=0)
+        y_train = np.concatenate((y_train_positive, y_train_negative), axis=0)
+
+        x_train, y_train = shuffle(x_train, y_train)
+
+        if test_size == 0:
+            return x_train, y_train
+
+    x_test_positive = open("test_positive.txt", "r", encoding="utf8").readlines()[:test_size]
+    x_test_negative = open("test_negative.txt", "r", encoding="utf8").readlines()[:test_size]
+
     x_test_positive = np.asarray(x_test_positive, dtype='<U1000')
     x_test_negative = np.asarray(x_test_negative, dtype='<U1000')
 
-    y_train_positive = np.ones_like(x_train_positive, dtype=np.uint16)
-    y_train_negative = np.zeros_like(x_train_negative, dtype=np.uint16)
     y_test_positive = np.ones_like(x_test_positive, dtype=np.uint16)
     y_test_negative = np.zeros_like(x_test_negative, dtype=np.uint16)
-
-    print('train positive: ', y_train_positive.shape)
-    print('train negative: ', y_train_negative.shape)
     print('test positive: ', y_test_positive.shape)
     print('test negative: ', y_test_negative.shape)
 
-    train_ratio = y_train_positive.shape[0] / (y_train_positive.shape[0] + y_train_negative.shape[0])
     test_ratio = y_test_positive.shape[0] / (y_test_positive.shape[0] + y_test_negative.shape[0])
-    print('train positive percentage: ', train_ratio)
     print('test positive percentage: ', test_ratio)
-
-    x_train = np.concatenate((x_train_positive, x_train_negative), axis=0)
-    y_train = np.concatenate((y_train_positive, y_train_negative), axis=0)
 
     x_test = np.concatenate((x_test_positive, x_test_negative), axis=0)
     y_test = np.concatenate((y_test_positive, y_test_negative), axis=0)
 
-    x_train, y_train = shuffle(x_train, y_train)
+    if end_index == 0:
+        return x_test, y_test
 
     return x_train, x_test, y_train, y_test
 
@@ -193,4 +202,24 @@ def add_features_and_vectorize(x_str, vectorize_function, vectorize_function_arg
         additional_features = np.reshape(additional_features, (x.shape[0], MAX_BRANCH_LENGTH, -1))
         x = np.concatenate((x, additional_features), axis=2)
     return x
+
+
+def get_generator(x_train, y_train, batches_in_file=10):
+    if isinstance(x_train, str):
+        def generate_():
+            i = -1
+            while True:
+                i += 1
+                i = i % (TRAIN_SET_SIZE // (BATCH_SIZE  * batches_in_file)
+                
+                yield (np.load(x_train + str(i) + ".npy")[], np.load(y_train + str(i) + ".npy"))
+    else:
+        def generate_():
+            batch_size = BATCH_SIZE
+            i = -1*batch_size
+            while True:
+                i += batch_size
+                i = i % len(x_train)
+                yield (x_train[i:i+batch_size], y_train[i:i+batch_size])
+    return generate_
 
