@@ -1,5 +1,5 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
-# from nltk.corpus import stopwords
+from nltk.corpus import stopwords
 import numpy as np
 
 from keras.preprocessing.text import Tokenizer
@@ -210,9 +210,12 @@ def get_generator(x_train, y_train, batches_in_file=10):
             i = -1
             while True:
                 i += 1
-                i = i % (TRAIN_SET_SIZE // (BATCH_SIZE  * batches_in_file)
-                
-                yield (np.load(x_train + str(i) + ".npy")[], np.load(y_train + str(i) + ".npy"))
+                i = i % (TRAIN_SET_SIZE // (BATCH_SIZE * batches_in_file))
+                batch_index = i % batches_in_file
+
+                x_curr = np.load(x_train + str(i) + ".npy")[batch_index * BATCH_SIZE:(batch_index+1)*BATCH_SIZE]
+                y_curr = np.load(y_train + str(i) + ".npy")[batch_index * BATCH_SIZE:(batch_index + 1) * BATCH_SIZE]
+                yield (x_curr, y_curr)
     else:
         def generate_():
             batch_size = BATCH_SIZE

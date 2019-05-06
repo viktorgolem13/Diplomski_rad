@@ -103,31 +103,40 @@ def lstm():
 
 
 def lstm_memory_efficient():
+    '''
     vectorize_function = preprocessing.vectorize_data_glove
     embedding_index = preprocessing.get_embeddings_index()
     
     data_per_iteration = BATCH_SIZE * 10
     num_of_batches = TRAIN_SET_SIZE // data_per_iteration
+
     for i in range(num_of_batches):
         # x_train, y_train = preprocessing.get_data(start_index=i*data_per_iteration, end_index=(i+1)*data_per_iteration, test_size=0)
-        x_train, y_train = bipolarDataset.get_bipolar_disorder_data(start_index=int(i * data_per_iteration / 2), 
-                                                                    skiprows_start=int((i+1) * data_per_iteration / 2), 
-                                                                    skiprows_end=int((i+1) * data_per_iteration / 2 + 10**7), 
+        x_train, y_train = bipolarDataset.get_bipolar_disorder_data(start_index=i * data_per_iteration // 2,
+                                                                    skiprows_start=(i+1) * data_per_iteration // 2,
+                                                                    skiprows_end=(i+1) * data_per_iteration // 2 + 10**7,
                                                                     nrows=data_per_iteration, test_size=0)
 
         x_train = preprocessing.add_features_and_vectorize(x_train, vectorize_function, embedding_index)
         np.save("x_train" + str(i) + ".npy", x_train)
         y_train_one_hot = preprocessing.class_one_hot(y_train)
         np.save("y_train" + str(i) + ".npy", y_train_one_hot)
-    
-    x_test, y_test = bipolarDataset.get_bipolar_disorder_data(start_index=num_of_batches * data_per_iteration / 2, 
-                                                              skiprows_start=(num_of_batches+1) * data_per_iteration / 2 + 250, 
-                                                              skiprows_end=(num_of_batches+1) * data_per_iteration / 2 + 10**7 + 250, 
+
+    x_test, y_test = bipolarDataset.get_bipolar_disorder_data(start_index=num_of_batches * data_per_iteration // 2,
+                                                              skiprows_start=(num_of_batches+1) * data_per_iteration // 2,
+                                                              skiprows_end=(num_of_batches+1) * data_per_iteration // 2 + 10**7,
                                                               nrows=data_per_iteration, test_size=1)
     # x_test, y_test = preprocessing.get_data(start_index=0, end_index=0, test_size=500)
 
     x_test = preprocessing.add_features_and_vectorize(x_test, vectorize_function, embedding_index)
-    model = get_lstm_model(use_embedding_layer=False, input_shape=(x_train.shape[1], x_train.shape[2]))
+    np.save("x_test.npy", x_test)
+    np.save("y_test.npy", y_test)
+    '''
+
+    x_test = np.load("x_test.npy")
+    y_test = np.load("y_test.npy")
+
+    model = get_lstm_model(use_embedding_layer=False, input_shape=(x_test.shape[1], x_test.shape[2]))
     run("x_train", x_test, "y_train", y_test, model, True)
 
 

@@ -1,10 +1,10 @@
-import tensorflow as tf
 from keras.layers import LSTM
 from keras.layers import Dense, Input, concatenate, Embedding
 from keras.models import Model
 from keras.optimizers import Adam
 
 from sklearn import metrics
+import numpy as np
 
 import preprocessing
 import bipolarDataset
@@ -203,17 +203,18 @@ def multitask_memory_efficient():
     data_per_iteration = BATCH_SIZE
     num_of_batches = TRAIN_SET_SIZE // data_per_iteration
     for i in range(num_of_batches):
-        x_train1, y_train1 = preprocessing.get_data(start_index=i*data_per_iteration, end_index=(i+1)*data_per_iteration, test_size=0)
-        x_train2, y_train2 = bipolarDataset.get_bipolar_disorder_data(skiprows_start=(i+1) * data_per_iteration / 2, 
-            skiprows_end=(i+1) * data_per_iteration / 2 + 10**7, nrows=data_per_iteration)
+        x_train1, y_train1 = preprocessing.get_data(start_index=i*data_per_iteration,
+                                                    end_index=(i+1)*data_per_iteration, test_size=0)
+        x_train2, y_train2 = bipolarDataset.get_bipolar_disorder_data(start_index=i * data_per_iteration // 2,
+                                                            skiprows_start=(i + 1) * data_per_iteration // 2,
+                                                            skiprows_end=(i + 1) * data_per_iteration // 2 + 10 ** 7,
+                                                            nrows=data_per_iteration, test_size=0)
 
         x_train1 = preprocessing.add_features_and_vectorize(x_train1, vectorize_function, embedding_index)
         x_train2 = preprocessing.add_features_and_vectorize(x_train2, vectorize_function, embedding_index)
 
         x_train1 = x_train1[:len(x_train2)]
-        x_test1 = x_test1[:len(x_test2)]
         y_train1 = y_train1[:len(y_train2)]
-        y_test1 = y_test1[:len(y_test2)]
 
         np.save("x_train1" + str(i) + ".npy", x_train1)
         y_train_one_hot1 = preprocessing.class_one_hot(y_train1)
@@ -225,13 +226,15 @@ def multitask_memory_efficient():
     
     x_test1, y_test1 = preprocessing.get_data(start_index=0, end_index=0, test_size=500)
 
-    x_test2, y_test2 = bipolarDataset.get_bipolar_disorder_data(start_index=num_of_batches * data_per_iteration / 2, 
-                                                              skiprows_start=(num_of_batches+1) * data_per_iteration / 2 + 250, 
-                                                              skiprows_end=(num_of_batches+1) * data_per_iteration / 2 + 10**7 + 250, 
-                                                              nrows=data_per_iteration, test_size=1)
+    x_test2, y_test2 = bipolarDataset.get_bipolar_disorder_data(start_index=num_of_batches * data_per_iteration // 2,
+                                            skiprows_start=(num_of_batches + 1) * data_per_iteration // 2 + 250,
+                                            skiprows_end=(num_of_batches + 1) * data_per_iteration // 2 + 10 ** 7 + 250,
+                                            nrows=data_per_iteration, test_size=1)
 
     x_test1 = preprocessing.add_features_and_vectorize(x_test1, vectorize_function, embedding_index)
     x_test2 = preprocessing.add_features_and_vectorize(x_test2, vectorize_function, embedding_index)
+    x_test1 = x_test1[:len(x_test2)]
+    y_test1 = y_test1[:len(y_test2)]
 
     model = get_multitask_model((x_test1.shape[1], x_test1.shape[2]))
     run_multitask("x_train1", x_test1, "y_train1", y_test1, "x_train2", x_test2, "y_train2", y_test2, model)
