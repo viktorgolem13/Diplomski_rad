@@ -5,13 +5,13 @@ from keras.layers import Activation, Dropout
 from keras.optimizers import Adam
 from keras.regularizers import l2
 
-import tensorflow as tf
 import numpy as np
 from sklearn import metrics
 
 import preprocessing
+import generators
+import load_data
 # import hyperparameters
-import bipolarDataset
 from constants import *
 
 
@@ -58,9 +58,9 @@ def get_lstm_model(use_embedding_layer, word_index=None, embedding_matrix=None, 
     return model
 
 
-def run(x_train, x_test, y_train_one_hot, y_test, model, fit_generator=False):
+def run(x_train, x_test, y_train_one_hot, y_test, model, fit_generator=False, batches_in_file=None, num_of_files=None):
     if fit_generator:
-        generate = preprocessing.get_generator(x_train, y_train_one_hot)
+        generate = generators.get_generator(x_train, y_train_one_hot, batches_in_file, num_of_files)
         model.fit_generator(generate(), steps_per_epoch=20, epochs=10)
     else:
         model.fit(x_train, y_train_one_hot, nb_epoch=8, batch_size=BATCH_SIZE)
@@ -73,14 +73,14 @@ def run(x_train, x_test, y_train_one_hot, y_test, model, fit_generator=False):
 
 
 def ff():
-    x_train, x_test, y_train, y_test = preprocessing.get_data()
+    x_train, x_test, y_train, y_test = load_data.get_depression_data()
     x_train, x_test = preprocessing.vectorize_data_tfidf(x_train, x_test)
     model = get_ff_model((x_train.shape[1], ))
     run(x_train, x_test, y_train, y_test, model)
 
 
 def lstm_with_embedding_layer():
-    x_train, x_test, y_train, y_test = preprocessing.get_data()
+    x_train, x_test, y_train, y_test = load_data.get_depression_data()
     y_train_one_hot = preprocessing.class_one_hot(y_train)
     embedding_matrix, word_index, tokenizer = preprocessing.get_embedding_matrix(x_train)
     x_train = preprocessing.vectorize_with_tokenizer(x_train, tokenizer)
@@ -90,8 +90,12 @@ def lstm_with_embedding_layer():
 
 
 def lstm():
-    # x_train, x_test, y_train, y_test = preprocessing.get_data()
-    x_train, x_test, y_train, y_test = bipolarDataset.get_bipolar_disorder_data()
+    # x_train, x_test, y_train, y_test = load_data.get_depression_data()
+    # x_train, x_test, y_train, y_test = load_data.get_bipolar_disorder_data()
+    # x_train, y_train = load_data.get_rsdd_data(set_="train")
+    # x_test, y_test = load_data.get_rsdd_data(end_index=5, set_="validation")
+    x_train, y_train = load_data.get_smhd_data(set_="train")
+    x_test, y_test = load_data.get_smhd_data(end_index=5, set_="validation")
     y_train_one_hot = preprocessing.class_one_hot(y_train)
     vectorize_function = preprocessing.vectorize_data_glove
     embedding_index = preprocessing.get_embeddings_index()
@@ -103,35 +107,46 @@ def lstm():
 
 
 def lstm_memory_efficient():
-    '''
+
     vectorize_function = preprocessing.vectorize_data_glove
     embedding_index = preprocessing.get_embeddings_index()
     
-    data_per_iteration = BATCH_SIZE * 10
-    num_of_batches = TRAIN_SET_SIZE // data_per_iteration
+    data_per_iteration = 5  # BATCH_SIZE * 10
+    num_of_batches = 5  # TRAIN_SET_SIZE // data_per_iteration
 
-    for i in range(num_of_batches):
-        # x_train, y_train = preprocessing.get_data(start_index=i*data_per_iteration, end_index=(i+1)*data_per_iteration, test_size=0)
-        x_train, y_train = bipolarDataset.get_bipolar_disorder_data(start_index=i * data_per_iteration // 2,
-                                                                    skiprows_start=(i+1) * data_per_iteration // 2,
-                                                                    skiprows_end=(i+1) * data_per_iteration // 2 + 10**7,
-                                                                    nrows=data_per_iteration, test_size=0)
+    count = 0
+    # for i in range(num_of_batches):
+    i = 0
+    while count < TRAIN_SET_SIZE // BATCH_SIZE:
+        i += 1
+        # x_train, y_train = load_data.get_depression_data(start_index=i*data_per_iteration,
+        #                                                  end_index=(i+1)*data_per_iteration, test_size=0)
+        # x_train, y_train = load_data.get_bipolar_disorder_data(start_index=i * data_per_iteration // 2,
+        #                                                        skiprows_start=(i+1) * data_per_iteration // 2,
+        #                                                       skiprows_end=(i+1) * data_per_iteration // 2 + 10**7,
+        #                                                        nrows=data_per_iteration, test_size=0)
+        x_train, y_train = load_data.get_rsdd_data(start_index=i*data_per_iteration,
+                                                   end_index=(i + 1) * data_per_iteration, set_="train")
 
         x_train = preprocessing.add_features_and_vectorize(x_train, vectorize_function, embedding_index)
-        np.save("x_train" + str(i) + ".npy", x_train)
-        y_train_one_hot = preprocessing.class_one_hot(y_train)
-        np.save("y_train" + str(i) + ".npy", y_train_one_hot)
+        y_train_one_hot = preprocessing.class_one_hot(y_train, 2)
+        print(x_train.shape)
+        print(y_train_one_hot.shape)
+        for j in range(len(x_train) // BATCH_SIZE):
+            np.save("x_train" + str(count) + ".npy", x_train[j * BATCH_SIZE:(j + 1) * BATCH_SIZE])
+            np.save("y_train" + str(count) + ".npy", y_train_one_hot[j * BATCH_SIZE:(j + 1) * BATCH_SIZE])
+            count += 1
 
-    x_test, y_test = bipolarDataset.get_bipolar_disorder_data(start_index=num_of_batches * data_per_iteration // 2,
-                                                              skiprows_start=(num_of_batches+1) * data_per_iteration // 2,
-                                                              skiprows_end=(num_of_batches+1) * data_per_iteration // 2 + 10**7,
-                                                              nrows=data_per_iteration, test_size=1)
-    # x_test, y_test = preprocessing.get_data(start_index=0, end_index=0, test_size=500)
+    # x_test, y_test = load_data.get_bipolar_disorder_data(start_index=num_of_batches * data_per_iteration // 2,
+    #                                                     skiprows_start=(num_of_batches+1) * data_per_iteration // 2,
+    #                                                     skiprows_end=(num_of_batches+1) * data_per_iteration // 2 + 10**7,
+    #                                                     nrows=data_per_iteration, test_size=1)
+    # x_test, y_test = load_data.get_depression_data(start_index=0, end_index=0, test_size=500)
+    x_test, y_test = load_data.get_rsdd_data(end_index=5, set_="validation")
 
     x_test = preprocessing.add_features_and_vectorize(x_test, vectorize_function, embedding_index)
     np.save("x_test.npy", x_test)
     np.save("y_test.npy", y_test)
-    '''
 
     x_test = np.load("x_test.npy")
     y_test = np.load("y_test.npy")
@@ -141,4 +156,4 @@ def lstm_memory_efficient():
 
 
 if __name__ == '__main__':
-    lstm_memory_efficient()
+    lstm()
