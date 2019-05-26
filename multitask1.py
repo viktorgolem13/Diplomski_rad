@@ -130,13 +130,12 @@ def get_multitask_model_2_embeddings(input_shape, word_index, embedding_matrix):
 
 
 def run_multitask(x_train1, x_test1, y_train1_one_hot, y_test1, x_train2, x_test2, y_train2_one_hot, y_test2,
-                  model, fit_generator=False, batches_in_file=None, num_of_files=None):
+                  model, fit_generator=False, steps_per_epoch=20, epochs=5):
     if fit_generator:
-        generate = generators.get_generator_multitask(x_train1, y_train1_one_hot, x_train2, y_train2_one_hot,
-                                                      batches_in_file, num_of_files)
-        model.fit_generator(generate(), steps_per_epoch=20, epochs=10)
+        generate = generators.get_generator_multitask(x_train1, y_train1_one_hot, x_train2, y_train2_one_hot)
+        model.fit_generator(generate(), steps_per_epoch=steps_per_epoch, epochs=epochs)
     else:
-        model.fit([x_train1, x_train2], [y_train1_one_hot, y_train2_one_hot], nb_epoch=8, batch_size=50)
+        model.fit([x_train1, x_train2], [y_train1_one_hot, y_train2_one_hot], nb_epoch=epochs, batch_size=50)
 
     pred = model.predict([x_test1, x_test2])
 
@@ -156,3 +155,6 @@ def run_multitask(x_train1, x_test1, y_train1_one_hot, y_test1, x_train2, x_test
     print(y_test2)
     print('acc: ', metrics.accuracy_score(pred2, y_test2))
     print('f1: ', metrics.f1_score(pred2, y_test2))
+
+    return metrics.accuracy_score(pred1, y_test1), metrics.f1_score(pred1, y_test1), \
+        metrics.accuracy_score(pred2, y_test2), metrics.f1_score(pred2, y_test2)

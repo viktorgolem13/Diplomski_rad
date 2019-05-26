@@ -2,100 +2,77 @@ import numpy as np
 from constants import *
 
 
-def get_curr_x_y(x_train, y_train, batches_in_file, i):
-    get_curr_x_y.curr_i = None
-    get_curr_x_y.x_curr = None
-    get_curr_x_y.y_curr = None
+def get_curr_x_y(x_train_filenames, y_train_filenames, batch_counter, file_counter):
+    if batch_counter == 0 and file_counter == 0:
+        get_curr_x_y.x_curr = np.load(x_train_filenames[file_counter])
+        get_curr_x_y.y_curr = np.load(y_train_filenames[file_counter])
+        get_curr_x_y.batches_in_file = len(get_curr_x_y.y_curr) // BATCH_SIZE
 
-    if get_curr_x_y.curr_i != i:
-        get_curr_x_y.x_curr = np.load(x_train + str(i) + ".npy")
-        get_curr_x_y.y_curr = np.load(y_train + str(i) + ".npy")
-        get_curr_x_y.curr_i = i
+    elif batch_counter >= get_curr_x_y.batches_in_file:
+        batch_counter = 0
+        file_counter += 1
+        file_counter %= len(x_train_filenames)
+        # print(x_train_filenames)
+        # print(file_counter)
+        get_curr_x_y.x_curr = np.load(x_train_filenames[file_counter])
+        get_curr_x_y.y_curr = np.load(y_train_filenames[file_counter])
+        get_curr_x_y.batches_in_file = len(get_curr_x_y.y_curr) // BATCH_SIZE
+        # print("x_curr ", get_curr_x_y.x_curr.shape)
+        # print("y_curr ", get_curr_x_y.y_curr.shape)
+        # print("batches_in_file ", get_curr_x_y.batches_in_file)
 
-    if batches_in_file is None:
-        len_ = len(np.load(y_train + str(i) + ".npy"))
-        batches_in_file_new = len_ // BATCH_SIZE
-    else:
-        batches_in_file_new = batches_in_file
+    x_curr = get_curr_x_y.x_curr[batch_counter * BATCH_SIZE:(batch_counter + 1) * BATCH_SIZE]
+    y_curr = get_curr_x_y.y_curr[batch_counter * BATCH_SIZE:(batch_counter + 1) * BATCH_SIZE]
 
-    if batches_in_file_new != 1:
-        batch_index = i % batches_in_file_new
-        x_curr = get_curr_x_y.x_curr[batch_index * BATCH_SIZE:(batch_index + 1) * BATCH_SIZE]
-        y_curr = get_curr_x_y.y_curr[batch_index * BATCH_SIZE:(batch_index + 1) * BATCH_SIZE]
-    else:
-        x_curr = get_curr_x_y.x_curr[:BATCH_SIZE]
-        y_curr = get_curr_x_y.x_curr[:BATCH_SIZE]
-
-    return x_curr, y_curr
+    return x_curr, y_curr, batch_counter, file_counter
 
 
-def get_curr_x_y2(x_train, y_train, batches_in_file, i):
-    if batches_in_file is None:
-        len_ = len(np.load(y_train + str(i) + ".npy"))
-        batches_in_file_new = len_ // BATCH_SIZE
-    else:
-        batches_in_file_new = batches_in_file
+def get_generator(x_train_filenames, y_train_filenames):
+    def generate_():
+        batch_counter = -1
+        file_counter = 0
+        while True:
+            batch_counter += 1
+            print()
+            print("batch_counter: ", batch_counter)
+            print("file_counter: ", file_counter)
+            x_curr, y_curr, batch_counter, file_counter = get_curr_x_y(x_train_filenames, y_train_filenames,
+                                                                       batch_counter, file_counter)
+            yield (x_curr, y_curr)
 
-    if batches_in_file_new != 1:
-        batch_index = i % batches_in_file_new
-        x_curr = np.load(x_train + str(i) + ".npy")[batch_index * BATCH_SIZE:(batch_index + 1) * BATCH_SIZE]
-        y_curr = np.load(y_train + str(i) + ".npy")[batch_index * BATCH_SIZE:(batch_index + 1) * BATCH_SIZE]
-    else:
-        x_curr = np.load(x_train + str(i) + ".npy")[:BATCH_SIZE]
-        y_curr = np.load(y_train + str(i) + ".npy")[:BATCH_SIZE]
-
-    return x_curr, y_curr
-
-
-def get_generator(x_train, y_train, batches_in_file=None, num_of_files=None):
-
-    if isinstance(x_train, str):
-        if batches_in_file is None and num_of_files is None:
-            print("batches_in_file and num_of_files are None")
-            return
-
-        def generate_():
-            i = -1
-            while True:
-                i += 1
-                if num_of_files is None:
-                    i %= (TRAIN_SET_SIZE // (BATCH_SIZE * batches_in_file))
-                else:
-                    i %= num_of_files
-                x_curr, y_curr = get_curr_x_y(x_train, y_train, batches_in_file, i)
-                yield (x_curr, y_curr)
-    else:
-        def generate_():
-            batch_size = BATCH_SIZE
-            i = -1*batch_size
-            while True:
-                i += batch_size
-                i = i % len(x_train)
-                yield (x_train[i:i+batch_size], y_train[i:i+batch_size])
     return generate_
 
 
-def get_generator_multitask(x_train1, y_train1, x_train2, y_train2, batches_in_file=None, num_of_files=None):
-    if isinstance(x_train1, str):
-        def generate_():
-            i = -1
-            while True:
-                i += 1
-                if num_of_files is None:
-                    i %= (TRAIN_SET_SIZE // (BATCH_SIZE * batches_in_file))
-                else:
-                    i %= num_of_files
-                x_curr1, y_curr1 = get_curr_x_y(x_train1, y_train1, batches_in_file, i)
-                x_curr2, y_curr2 = get_curr_x_y(x_train2, y_train2, batches_in_file, i)
-                yield ({"input1": x_curr1, "input2": x_curr2}, {"pred1": y_curr1, "pred2": y_curr2})
-    else:
-        def generate_():
-            batch_size = BATCH_SIZE
-            i = -1*batch_size
-            while True:
-                i += batch_size
-                i = i % len(x_train1)
-                yield ({"input1": x_train1[i:i+batch_size], "input2": x_train2[i:i+batch_size]},
-                       {"pred1": y_train1[i:i+batch_size], "pred2": y_train2[i:i+batch_size]})
+def get_generator_multitask(x_train1_filenames, y_train1_filenames, x_train2_filenames, y_train2_filenames):
+    def generate_():
+        batch_counter = -1
+        file_counter = 0
+        while True:
+            batch_counter += 1
+            x_curr1, y_curr1, _, _ = get_curr_x_y(x_train1_filenames, y_train1_filenames, batch_counter, file_counter)
+            x_curr2, y_curr2, batch_counter, file_counter = get_curr_x_y(x_train2_filenames, y_train2_filenames,
+                                                                         batch_counter, file_counter)
+            yield ({"input1": x_curr1, "input2": x_curr2}, {"pred1": y_curr1, "pred2": y_curr2})
+    return generate_
 
+
+def get_generator_multitask2(x_train_list, y_train1_one_hot_list):
+    def generate_():
+        batch_counter = -1
+        file_counter = 0
+        while True:
+            batch_counter += 1
+            input_dict = dict()
+            output_dict = dict()
+            for i in range(len(x_train_list)):
+                if i != len(x_train_list) - 1:
+                    x_curr, y_curr, _, _ = get_curr_x_y(x_train_list[i], y_train1_one_hot_list[i],
+                                                        batch_counter, file_counter)
+                else:
+                    x_curr, y_curr, batch_counter, file_counter = get_curr_x_y(x_train_list[i],
+                                                                               y_train1_one_hot_list[i],
+                                                                               batch_counter, file_counter)
+                    input_dict["input" + str(i)] = x_curr
+                    output_dict["pred" + str(i)] = y_curr
+            yield (input_dict, output_dict)
     return generate_

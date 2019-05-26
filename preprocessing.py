@@ -104,6 +104,7 @@ def vectorize_data_1d_glove(x_str, embeddings_index):
 
 def vectorize_data_glove(x_str, embeddings_index):
     x = []
+    max_seq_len = -1
     for podatak in x_str:
         temp = []
         for word in podatak.split():
@@ -117,11 +118,14 @@ def vectorize_data_glove(x_str, embeddings_index):
         if temp.shape[0] < MAX_BRANCH_LENGTH:
             temp = np.concatenate((temp, np.zeros((MAX_BRANCH_LENGTH - temp.shape[0], temp.shape[1]))), axis=0)
         else:
+            if temp.shape[0] > max_seq_len:
+                max_seq_len = temp.shape[0]
             temp = temp[:MAX_BRANCH_LENGTH]
 
         x.append(temp)
     x = np.reshape(x, (-1, MAX_BRANCH_LENGTH, EMBEDDING_DIM))
     print(x.shape)
+    print("MAX SEQ LEN IS: ", max_seq_len)
 
     return x
 

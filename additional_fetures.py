@@ -1,5 +1,7 @@
 import numpy as np
 from constants import *
+import nltk
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 
 def length(x_str):
@@ -76,6 +78,26 @@ def count_absolute_words(x_str):
     return np.asarray(count_list)
 
 
+def pos_tags(x_str, which_tag_to_count):
+    count_list = []
+    for text in x_str:
+        count = 0
+        for w, t in nltk.pos_tag(nltk.word_tokenize(text)):
+            if t.lower().startswith(which_tag_to_count):
+                count += 1
+        count_list.append(count)
+    return np.asarray(count_list)
+
+
+def sentiment(x_str):
+    sentiment_list = []
+    sentiment_analyzer = SentimentIntensityAnalyzer()
+    for text in x_str:
+        sentiment_ = sentiment_analyzer.polarity_scores(text)['compound']
+        sentiment_list.append(sentiment_)
+    return np.asarray(sentiment_list)
+
+
 def get_additional_features(x_str):
     additional_features = list()
     additional_features.append(length(x_str))
@@ -87,6 +109,10 @@ def get_additional_features(x_str):
     additional_features.append(num_of_word_occurences(x_str, 'I'))
     additional_features.append(num_of_word_occurences(x_str, 'me'))
     additional_features.append(num_of_word_occurences(x_str, 'myself'))
+
+    additional_features.append(pos_tags(x_str, 'nn'))
+    additional_features.append(pos_tags(x_str, 'vb'))
+    additional_features.append(sentiment(x_str))
 
     num_features = len(additional_features)
     additional_features = np.asarray(additional_features).reshape(-1, num_features)
